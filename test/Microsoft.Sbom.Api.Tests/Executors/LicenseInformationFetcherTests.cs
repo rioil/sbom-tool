@@ -140,6 +140,24 @@ public class LicenseInformationFetcherTests
     }
 
     [TestMethod]
+    public void ConvertComponentToListForApi_Maven()
+    {
+        var licenseInformationFetcher = new LicenseInformationFetcher(mockLogger.Object, mockRecorder.Object, mockLicenseInformationService.Object);
+
+        var scannedComponents = new List<ScannedComponent>
+        {
+            new ScannedComponent
+            {
+               Component = new MavenComponent("com.example.maven", "mavenpackage", "1.0.0")
+            }
+        };
+
+        var listOfComponentsForApi = licenseInformationFetcher.ConvertComponentsToListForApi(scannedComponents);
+
+        Assert.AreEqual("maven/mavencentral/com.example.maven/mavenpackage/1.0.0", listOfComponentsForApi[0]);
+    }
+
+    [TestMethod]
     public void ConvertClearlyDefinedApiResponseToList_GoodResponse()
     {
         var expectedKey = "json5@2.2.3";

@@ -43,8 +43,14 @@ public class LicenseInformationFetcher : ILicenseInformationFetcher
                 var clearlyDefinedNamespace = "-";
                 var componentName = scannedComponent.Component.PackageUrl?.Name;
 
+                // If the PackageUrl contains Namespace then use it as the clearlyDefinedNamespace
+                if (!string.IsNullOrEmpty(scannedComponent.Component.PackageUrl.Namespace))
+                {
+                    clearlyDefinedNamespace = scannedComponent.Component.PackageUrl.Namespace;
+                }
+
                 // If the clearlyDefinedName contains a / then split it and use the first part as the clearlyDefinedNamespace and the second part as the clearlyDefinedName
-                if (!string.IsNullOrEmpty(componentName) && componentName.Contains('/'))
+                else if (!string.IsNullOrEmpty(componentName) && componentName.Contains('/'))
                 {
                     var clearlyDefinedNameParts = componentName.Split('/');
                     clearlyDefinedNamespace = clearlyDefinedNameParts[0];
@@ -70,6 +76,9 @@ public class LicenseInformationFetcher : ILicenseInformationFetcher
                         break;
                     case "cocoapods":
                         listOfComponentsForApi.Add($"pod/{componentType}/{clearlyDefinedNamespace}/{componentName}/{componentVersion}");
+                        break;
+                    case "maven":
+                        listOfComponentsForApi.Add($"{componentType}/mavencentral/{clearlyDefinedNamespace}/{componentName}/{componentVersion}");
                         break;
 
                     default:
