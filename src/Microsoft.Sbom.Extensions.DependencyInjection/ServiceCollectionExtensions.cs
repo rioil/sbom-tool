@@ -1,7 +1,11 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+namespace Microsoft.Sbom.Extensions.DependencyInjection;
+
 using System.Collections.Concurrent;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using Microsoft.ComponentDetection.Orchestrator;
 using Microsoft.ComponentDetection.Orchestrator.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,8 +47,6 @@ using Serilog.Filters;
 using Constants = Microsoft.Sbom.Api.Utils.Constants;
 using IComponentDetector = Microsoft.ComponentDetection.Contracts.IComponentDetector;
 using ILogger = Serilog.ILogger;
-
-namespace Microsoft.Sbom.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
@@ -127,7 +129,8 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IFileTypeUtils, FileTypeUtils>()
             .AddSingleton<ISignValidationProvider, SignValidationProvider>()
             .AddSingleton<IManifestParserProvider, ManifestParserProvider>()
-            .AddSingleton(x => {
+            .AddSingleton(x =>
+            {
                 var comparer = x.GetRequiredService<IOSUtils>().GetFileSystemStringComparer();
                 return new FileHashesDictionary(new ConcurrentDictionary<string, FileHashes>(comparer));
             })
@@ -177,7 +180,11 @@ public static class ServiceCollectionExtensions
             })
             .AddComponentDetection()
             .ConfigureLoggingProviders()
-            .AddHttpClient<LicenseInformationService>();
+            .AddHttpClient<LicenseInformationService>(client =>
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                client.Timeout = TimeSpan.FromSeconds(LicenseInformationService.ClientTimeoutSeconds);
+            });
 
         return services;
     }

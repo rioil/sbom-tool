@@ -20,7 +20,7 @@ public class LicenseInformationService : ILicenseInformationService
     private readonly ILogger log;
     private readonly IRecorder recorder;
     private readonly HttpClient httpClient;
-    private const int ClientTimeoutSeconds = 30;
+    public const int ClientTimeoutSeconds = 60;
 
     public LicenseInformationService(ILogger log, IRecorder recorder, HttpClient httpClient)
     {
@@ -37,9 +37,6 @@ public class LicenseInformationService : ILicenseInformationService
 
         var uri = new Uri("https://api.clearlydefined.io/definitions?expand=-files");
 
-        httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        httpClient.Timeout = TimeSpan.FromSeconds(ClientTimeoutSeconds);
-
         for (var i = 0; i < listOfComponentsForApi.Count; i += batchSize)
         {
             var batch = listOfComponentsForApi.Skip(i).Take(batchSize).ToList();
@@ -54,7 +51,7 @@ public class LicenseInformationService : ILicenseInformationService
 
             try
             {
-                responses.Add(await httpClient.PostAsync(uri, content));
+                responses.Add(await SendRequestAsync(uri, content));
             }
             catch (Exception e)
             {
@@ -81,5 +78,30 @@ public class LicenseInformationService : ILicenseInformationService
         }
 
         return responseContent;
+    }
+
+    private async Task<HttpResponseMessage> SendRequestAsync(Uri uri, StringContent content, int maxRetry = 5)
+    {
+        for (var i = 1; i <= maxRetry; i++)
+        {
+            try
+            {
+                var response = await httpClient.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    return response;
+                }
+                else
+                {
+                    log.Warning($"Request failed with status code {response.StatusCode}. ({i}/{maxRetry})");
+                }
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                log.Warning($"Request failed with exception {ex.Message}. ({i}/{maxRetry})");
+            }
+        }
+
+        throw new ClearlyDefinedResponseNotSuccessfulException("Failed to retrieve license information from API after multiple retries.");
     }
 }
